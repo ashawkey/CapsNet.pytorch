@@ -19,20 +19,24 @@ logger = io.logger(args["workspace_path"])
 
 
 class CapsTrainer(Trainer):
-    def train_step(self, inputs, truths):
+    def train_step(self, data):
+        inputs, truths = data
         truths = torch.eye(args["num_classes"]).to(inputs.device)[truths]
         outputs, recons = self.model(inputs, truths)
         loss = self.objective(inputs, truths, outputs, recons)
         return outputs, loss
 
-    def eval_step(self, inputs, truths):
-        outputs, recons = self.model(inputs)
+    def eval_step(self, data):
+        inputs, truths = data
+        truths = torch.eye(args["num_classes"]).to(inputs.device)[truths]
+        outputs, recons = self.model(inputs, truths)
+        loss = self.objective(inputs, truths, outputs, recons)
         # save recons
         if self.local_step % 10 == 0:
             recons = recons.view(-1, 1, 28, 28)
             recons = make_grid(recons, normalize=True, scale_each=True)
             self.writer.add_image("Image", recons, self.epoch * 10000 + self.local_step)
-        return outputs
+        return outputs, loss
 
 
 def create_trainer():
